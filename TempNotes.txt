@@ -1,0 +1,107 @@
+<Desktop>\{quick scripts}
+LOCAL_INSTALL_DIR=?:\Tools\Valheim\ValeheimExtComponentManager\
+LOCAL_INSTALL_DIR\{scripts & exe}
+LOCAL_INSTALL_DIR\OrigValheimFiles
+LOCAL_INSTALL_DIR\CurrentPluginFiles
+LOCAL_INSTALL_DIR\Components\ValeheimExtComponentManager
+LOCAL_INSTALL_DIR\Components\BepInExPack_Valheim\
+LOCAL_INSTALL_DIR\Components\VHVR-Valheim_VR
+LOCAL_INSTALL_DIR\Components\ValeheimVoiceCommander
+LOCAL_INSTALL_DIR\Temp
+
+LOCAL_INSTALL_DIR\Components\<ComponentName>\<archive>
+
+ValheimExtComponentManager=ValheimExtComponentManager-0.0.0.zip
+BepInExPack_Valheim=denikson-BepInExPack_Valheim-5.4.2202.zip
+VHVR-Valheim_VR=vhvr-847-0-9-19-1733193716.zip
+ValheimVoiceCommander=ValheimVoiceCommander-1.0.0.zip
+
+####
+
+archiveTargetPath = LOCAL_INSTALL_DIR\Components\BepInExPack_Valheim\archive\denikson-BepInExPack_Valheim-5.4.2202.zip
+installedFilePath = LOCAL_INSTALL_DIR\Components\BepInExPack_Valheim\archive\installed.flag
+
+checkUpdate(component)
+{
+    archiveExist = archiveExist(component);
+    archiveMatches = archiveExist && archiveMatches(component);
+
+    if (archiveMatches) return; // no install needed
+
+    if (archiveExists)
+    {
+        uninstall(component);
+    }
+
+    download(component);
+
+    install(component);
+}
+
+install(component)
+{
+    foreach (rootPath)
+    {
+        foreach (file in archive/rootPath)
+        {
+            var installPath = valheimInstallDir + '/' + rootPath;
+            var origBackupPath = origStorDir + '/' + rootPath;
+            copy(installPath, origBackPath);
+            copy(archive/rootPath, installPath)
+        }
+    }
+}
+####
+
+x
+if (archiveExist(component) && archive(component))
+
+if (archiveExist(component) && archiveDiffers(component))
+{
+    uninstall(component);
+}
+
+if (installed(component) && archiveDiffers(component))
+{
+
+}
+if exists(component::archiveTargetPath) uninstall(component)
+
+remove then download to LOCAL_INSTALL_DIR\Temp\denikson-BepInExPack_Valheim-5.4.2202.zip
+move to LOCAL_INSTALL_DIR\Components\BepInExPack_Valheim\
+
+####
+
+Clear temp on start
+Check if the filename of the installed archive is the same as the current value
+if not-differs skip-to-end
+download new archive
+remove existing component
+
+Let's create a SourceArchiveManagementUtil
+
+
+{ ComponentManageContext, ComponentArchiveSpec, component-name }
+
+Please create an program options class that holds the settings specified on the command line per those noted in the README.md
+
+Please make a ComponentManageContext that includes { a ComponentArchiveSpec attribute, an management install dir that will be the root of where the app works, the steam valheim dir where steam has valheim installed }
+
+#########
+
+--ext-component-manager::check-update { yes, no }
+--valheim-vr::check-update { yes, no }
+--valheim-vr::enable { yes, no, skip }
+--voice-commander::check-update { yes, no }
+--voice-commander::manage { run-while-valheim-runs, no, restart, start-if-not-running, stop }
+--valheim::start { yes, no }
+
+#########
+
+steve start valheim
+
+#########
+
+
+
+#########
