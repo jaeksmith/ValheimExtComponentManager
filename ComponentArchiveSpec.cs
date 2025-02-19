@@ -80,11 +80,9 @@ namespace ValheimExtComponentManager
             return null;
         }
 
-        public static async Task<ComponentArchiveSpec> PullSpec()
+        public static async Task<ComponentArchiveSpec> PullSpec(string url)
         {
-            string url = "https://www.dropbox.com/scl/fi/qk55f7qsio897bba5pdgu/manager-config.spec?rlkey=oricfpeq1bo9cbnmkygywn0pc&st=bwbj8dbk&dl=1";
-            DownloadUtil downloadUtil = new DownloadUtil();
-            string content = await downloadUtil.ReadContentAsStringAsync(url);
+            string content = await DownloadUtil.ReadContentAsStringAsync(url);
             Uri baseUri = new Uri(url);
             string baseUrl = baseUri.GetLeftPart(UriPartial.Path).Substring(0, baseUri.GetLeftPart(UriPartial.Path).LastIndexOf('/') + 1);
             ComponentArchiveSpec spec = new ComponentArchiveSpec(baseUrl);

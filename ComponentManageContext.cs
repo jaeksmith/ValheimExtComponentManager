@@ -24,12 +24,41 @@ namespace ValheimExtComponentManager
             return componentDir;
         }
 
-        public string GetComponentArchiveStorePath(string componentName)
+        public string GetComponentArchiveStoreDir(string componentName)
         {
             var componentDir = GetComponentDir(componentName);
             var archiveDir = System.IO.Path.Combine(componentDir, "Archive");
             System.IO.Directory.CreateDirectory(archiveDir);
-            return System.IO.Path.Combine(archiveDir, ArchiveSpec.GetComponentArchive(componentName));
+            return archiveDir;
+        }
+
+        public string GetComponentArchiveStoreCurrentFile(string componentName)
+        {
+            var archiveDir = GetComponentArchiveStoreDir(componentName);
+            var files = System.IO.Directory.GetFiles(archiveDir);
+
+            if (files.Length == 0)
+            {
+                return null;
+            }
+            else if (files.Length > 1)
+            {
+                throw new InvalidOperationException("More than one file found in the archive directory.");
+            }
+
+            return files[0];
+        }
+
+        public string GetComponentArchiveStoreFilePerSpec(string componentName)
+        {
+            var archiveDir = GetComponentArchiveStoreDir(componentName);
+            var archiveFile = System.IO.Path.Combine(archiveDir, GetComponentArchiveName(componentName));
+            return archiveFile;
+        }
+
+        public string GetComponentArchiveName(string componentName)
+        {
+            return ArchiveSpec.GetComponentArchive(componentName);
         }
 
         public string GetTempDir()
@@ -37,6 +66,13 @@ namespace ValheimExtComponentManager
             var tempDir = System.IO.Path.Combine(ManagementInstallDir, "Temp");
             System.IO.Directory.CreateDirectory(tempDir);
             return tempDir;
+        }
+
+        public string GetTempFilePath(string filename)
+        {
+            var tempDir = GetTempDir();
+            var timeFilePath = System.IO.Path.Combine(tempDir, filename);
+            return timeFilePath;
         }
 
         public string GetOrigValheimFiles()

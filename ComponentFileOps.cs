@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.IO.Compression;
+using System.Linq;
 
 namespace ValheimExtComponentManager
 {
@@ -15,12 +16,40 @@ namespace ValheimExtComponentManager
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
+        public static void UnzipSubdirectoryToTarget(string archivePath, string subdirectory, string targetDirectory)
+        {
+            using (var archive = ZipFile.OpenRead(archivePath))
+            {
+                foreach (var entry in archive.Entries)
+                {
+                    if (entry.FullName.StartsWith(subdirectory + "/", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string relativePath = entry.FullName.Substring(subdirectory.Length + 1);
+                        string destinationPath = Path.Combine(targetDirectory, relativePath);
+
+                        if (string.IsNullOrEmpty(entry.Name))
+                        {
+                            // This is a directory
+                            Directory.CreateDirectory(destinationPath);
+                        }
+                        else
+                        {
+                            // This is a file
+                            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
+                            entry.ExtractToFile(destinationPath, overwrite: true);
+                        }
+                    }
+                }
+            }
+        }
+
         public async Task DownloadAndStoreComponentArchive(string componentName)
         {
             var tempDir = _context.GetTempDir();
             var archiveFileName = _context.ArchiveSpec.GetComponentArchive(componentName);
             var tempFilePath = Path.Combine(tempDir, archiveFileName);
-            var archiveStorePath = _context.GetComponentArchiveStorePath(componentName);
+            var existingArchiveStorePath = _context.GetComponentArchiveStoreCurrentFile(componentName);
+            var newArchiveStorePath = _context.GetComponentArchiveStoreFilePerSpec(componentName);
             var downloadUrl = _context.ArchiveSpec.GetComponentArchiveUrl(componentName);
 
             try
@@ -32,12 +61,12 @@ namespace ValheimExtComponentManager
 
                 await DownloadUtil.DownloadFileAsync(downloadUrl, tempFilePath);
 
-                if (File.Exists(archiveStorePath))
+                if (existingArchiveStorePath != null && File.Exists(newArchiveStorePath))
                 {
-                    File.Delete(archiveStorePath);
+                    File.Delete(newArchiveStorePath);
                 }
 
-                File.Move(tempFilePath, archiveStorePath);
+                File.Move(tempFilePath, newArchiveStorePath);
             }
             catch (Exception)
             {
@@ -51,15 +80,21 @@ namespace ValheimExtComponentManager
 
         public async Task ScanComponentArchive(string componentName, string subdirectory, Action<string, ZipArchiveEntry> callback)
         {
-            var archiveStorePath = _context.GetComponentArchiveStorePath(componentName);
+            var archiveStorePath = _context.GetComponentArchiveStoreCurrentFile(componentName);
 
+            if (archiveStorePath == null)
+            {
+                return; // throw new InvalidOperationException($"No archive found for component {componentName}");
+            }
+
+            bool scanSubirectoryOnly = !string.IsNullOrEmpty(subdirectory);
             using (var archive = ZipFile.OpenRead(archiveStorePath))
             {
                 foreach (var entry in archive.Entries)
                 {
                     var entryPath = entry.FullName;
 
-                    if (!string.IsNullOrEmpty(subdirectory))
+                    if (scanSubirectoryOnly)
                     {
                         if (entryPath.StartsWith(subdirectory + "/", StringComparison.OrdinalIgnoreCase))
                         {
@@ -235,8 +270,8 @@ namespace ValheimExtComponentManager
             try
             {
                 await RestoreOverlappingFiles(componentName, subdirectory);
-                var archiveStorePath = _context.GetComponentArchiveStorePath(componentName);
-                if (File.Exists(archiveStorePath))
+                var archiveStorePath = _context.GetComponentArchiveStoreCurrentFile(componentName);
+                if (archiveStorePath != null && File.Exists(archiveStorePath))
                 {
                     File.Delete(archiveStorePath);
                 }
@@ -248,7 +283,7 @@ namespace ValheimExtComponentManager
             }
         }
 
-        private bool StreamsAreEqual(Stream stream1, Stream stream2)
+        private static bool StreamsAreEqual(Stream stream1, Stream stream2)
         {
             const int bufferSize = 2048;
             var buffer1 = new byte[bufferSize];
@@ -276,6 +311,53 @@ namespace ValheimExtComponentManager
                         return false;
                     }
                 }
+            }
+        }
+
+        public static bool CompareArchiveToDirectory(string archivePath, string targetDirectory)
+        {
+            using (var archive = ZipFile.OpenRead(archivePath))
+            {
+                var archiveEntries = archive.Entries.ToDictionary(e => e.FullName, e => e);
+                var directoryFiles = Directory.GetFiles(targetDirectory, "*", SearchOption.AllDirectories)
+                                              .ToDictionary(f => f.Substring(targetDirectory.Length + 1).Replace("\\", "/"), f => f);
+
+                // Check if all files in the directory match the archive
+                foreach (var file in directoryFiles)
+                {
+                    if (!archiveEntries.TryGetValue(file.Key, out var entry))
+                    {
+                        return false; // Extra file in the directory
+                    }
+
+                    using (var fileStream = new FileStream(file.Value, FileMode.Open, FileAccess.Read))
+                    using (var entryStream = entry.Open())
+                    {
+                        if (!StreamsAreEqual(fileStream, entryStream))
+                        {
+                            return false; // File data does not match
+                        }
+                    }
+                }
+
+                // Check if there are any extra files in the archive
+                foreach (var entry in archiveEntries)
+                {
+                    if (!directoryFiles.ContainsKey(entry.Key))
+                    {
+                        return false; // Extra file in the archive
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        public static void TouchFile(string filePath)
+        {
+            if (!File.Exists(filePath))
+            {
+                File.Create(filePath).Dispose();
             }
         }
     }
