@@ -173,11 +173,12 @@ namespace ValheimExtComponentManager
                 }
                 else
                 {
-                    filteredArgs.Add(_args[i]);
+                    // Wrap each argument in quotes
+                    filteredArgs.Add($"\"{_args[i]}\"");
                 }
             }
-            filteredArgs.Add("--ext-component-manager::check-update");
-            filteredArgs.Add("false");
+            filteredArgs.Add("\"--ext-component-manager::check-update\"");
+            filteredArgs.Add("\"check-install-only\"");
             var paramsContent = string.Join(" ", filteredArgs);
             File.WriteAllText(paramsFilePath, paramsContent);
 
