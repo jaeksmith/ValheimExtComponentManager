@@ -283,28 +283,37 @@ namespace ValheimExtComponentManager
             }
         }
 
+        /// <summary>
+        /// Compares two streams for equality. Assumes both streams are positioned at their start (position 0).
+        /// </summary>
+        /// <param name="stream1">First stream to compare</param>
+        /// <param name="stream2">Second stream to compare</param>
+        /// <returns>True if the streams contain identical bytes</returns>
         private static bool StreamsAreEqual(Stream stream1, Stream stream2)
         {
-            const int bufferSize = 2048;
+            const int bufferSize = 81920;
             var buffer1 = new byte[bufferSize];
             var buffer2 = new byte[bufferSize];
-
+            
             while (true)
             {
-                int count1 = stream1.Read(buffer1, 0, bufferSize);
-                int count2 = stream2.Read(buffer2, 0, bufferSize);
-
-                if (count1 != count2)
+                int bytesRead1 = ReadToFill(stream1, buffer1);
+                int bytesRead2 = ReadToFill(stream2, buffer2);
+                
+                // If we get different amounts of data, streams are not equal
+                if (bytesRead1 != bytesRead2)
                 {
                     return false;
                 }
-
-                if (count1 == 0)
+                
+                // If both streams are at EOF, and we've matched all bytes so far, streams are equal
+                if (bytesRead1 == 0)
                 {
                     return true;
                 }
-
-                for (int i = 0; i < count1; i++)
+                
+                // Compare the bytes we read
+                for (int i = 0; i < bytesRead1; i++)
                 {
                     if (buffer1[i] != buffer2[i])
                     {
@@ -314,13 +323,39 @@ namespace ValheimExtComponentManager
             }
         }
 
-        public static bool CompareArchiveToDirectory(string archivePath, string targetDirectory)
+        private static int ReadToFill(Stream stream, byte[] buffer)
+        {
+            int totalRead = 0;
+            while (totalRead < buffer.Length)
+            {
+                int read = stream.Read(buffer, totalRead, buffer.Length - totalRead);
+                if (read == 0) break; // EOF
+                totalRead += read;
+            }
+            return totalRead;
+        }
+
+        public static bool CompareArchiveToDirectory(string archivePath, string targetDirectory, string archiveSubdirectory)
         {
             using (var archive = ZipFile.OpenRead(archivePath))
             {
-                var archiveEntries = archive.Entries.ToDictionary(e => e.FullName, e => e);
+                // Filter and transform archive entries if subdirectory is specified
+                var archiveEntries = archive.Entries
+                    .Where(e => !string.IsNullOrEmpty(e.Name)) // Filter out directory entries
+                    .Where(e => string.IsNullOrEmpty(archiveSubdirectory) || 
+                               e.FullName.StartsWith(archiveSubdirectory + "/", StringComparison.OrdinalIgnoreCase))
+                    .ToDictionary(
+                        e => string.IsNullOrEmpty(archiveSubdirectory) 
+                            ? e.FullName 
+                            : e.FullName.Substring(archiveSubdirectory.Length + 1),
+                        e => e
+                    );
+
                 var directoryFiles = Directory.GetFiles(targetDirectory, "*", SearchOption.AllDirectories)
-                                              .ToDictionary(f => f.Substring(targetDirectory.Length + 1).Replace("\\", "/"), f => f);
+                                            .ToDictionary(
+                                                f => Path.GetRelativePath(targetDirectory, f).Replace('\\', '/'),
+                                                f => f
+                                            );
 
                 // Check if all files in the directory match the archive
                 foreach (var file in directoryFiles)
