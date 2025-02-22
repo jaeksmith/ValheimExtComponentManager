@@ -1,16 +1,18 @@
 @echo off
 setlocal
 
+echo CheckUpdateRun script started...
+
 :: Define directories
 set BASE_DIR=%~dp0
-set CUR_DIR=%BASE_DIR%ValheimExtComponentManager
-set NEW_DIR=%BASE_DIR%ValheimExtComponentManager.NEW
-set OLD_DIR=%BASE_DIR%ValheimExtComponentManager.OLD
+set CUR_DIR=%BASE_DIR%Current
+set NEW_DIR=%BASE_DIR%New
+set OLD_DIR=%BASE_DIR%Old
 set PARAMS_FILE=%BASE_DIR%ValheimExtComponentManager.Recall.Params.TEMP
 
 :: Ensure the params file is deleted if it exists
 if exist "%PARAMS_FILE%" (
-    echo Params File Found: %PARAMS_FILE%
+    echo Unexpected params file found: %PARAMS_FILE%
     del /f /q "%PARAMS_FILE%" 2>nul
     if exist "%PARAMS_FILE%" (
         echo ERROR: Failed to delete params file! Aborting.
@@ -25,12 +27,15 @@ call :update_files
 :: Switch to the current directory and run the program
 cd /d "%CUR_DIR%"
 if exist "ValheimExtComponentManager.exe" (
-    echo Running ValheimExtComponentManager.exe...
-    "ValheimExtComponentManager.exe"
+    echo Running ValheimExtComponentManager.exe with params: %*
+    "ValheimExtComponentManager.exe" %*
+    echo Returned from ValheimExtComponentManager.exe
 ) else (
     echo ERROR: ValheimExtComponentManager.exe not found in ValheimExtComponentManager directory!
     exit /b 1
 )
+
+echo CheckUpdateRun script continuing...
 
 :: Check if params file was created
 if exist "%PARAMS_FILE%" (
@@ -51,8 +56,10 @@ if defined PARAMS (
     cd /d "%CUR_DIR%"
     echo Re-running ValheimExtComponentManager.exe with params: %PARAMS%
     "ValheimExtComponentManager.exe" %PARAMS%
+    echo Returned from ValheimExtComponentManager.exe
 )
 
+echo CheckUpdateRun script done.
 exit /b 0
 
 :: =======================
@@ -85,20 +92,36 @@ if exist "%NEW_DIR%" (
     :: Move new version into place
     move "%NEW_DIR%" "%CUR_DIR%"
     if %errorlevel% neq 0 (
-        echo ERROR: Failed to move new version into place! Aborting update.
+        echo ERROR: Failed to move new version into place! Attempting recovery...
+        call :attempt_recovery
         exit /b 1
     )
     echo Update complete!
-)
+) else (
+    echo No update directory found.
 
-:: Recovery: If current dir is missing but old exists, restore it
-if not exist "%CUR_DIR%" if exist "%OLD_DIR%" (
-    echo Restoring previous version...
-    move "%OLD_DIR%" "%CUR_DIR%"
-    if %errorlevel% neq 0 (
-        echo ERROR: Failed to restore previous version! Aborting recovery.
-        exit /b 1
+    :: Check if recovery is needed when no new version exists
+    if not exist "%CUR_DIR%" (
+        echo No new version found, but current version is missing. Attempting recovery...
+        call :attempt_recovery
     )
 )
 
+exit /b
+
+:: =======================
+:: RECOVERY FUNCTION
+:: =======================
+:attempt_recovery
+if exist "%OLD_DIR%" (
+    echo Attempting to restore previous version...
+    move "%OLD_DIR%" "%CUR_DIR%"
+    if %errorlevel% neq 0 (
+        echo ERROR: Failed to restore previous version! System may be in an inconsistent state.
+        exit /b 1
+    )
+    echo Successfully restored previous version.
+) else (
+    echo WARNING: No backup version available to restore.
+)
 exit /b
