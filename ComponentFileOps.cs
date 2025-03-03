@@ -78,7 +78,12 @@ namespace ValheimExtComponentManager
             }
         }
 
-        public async Task ScanComponentArchive(string componentName, string subdirectory, Action<string, ZipArchiveEntry> callback)
+        private static bool IsDirectory(ZipArchiveEntry entry)
+        {
+            return string.IsNullOrEmpty(entry.Name) || entry.FullName.EndsWith("/");
+        }
+
+        public async Task ScanComponentArchive(string componentName, string subdirectory, Action<string, ZipArchiveEntry, bool> callback)
         {
             var archiveStorePath = _context.GetComponentArchiveStoreCurrentFile(componentName);
 
@@ -99,6 +104,11 @@ namespace ValheimExtComponentManager
                         if (entryPath.StartsWith(subdirectory + "/", StringComparison.OrdinalIgnoreCase))
                         {
                             entryPath = entryPath.Substring(subdirectory.Length + 1);
+                            // Skip if the entry path is empty (means it's the subdirectory itself)
+                            if (string.IsNullOrEmpty(entryPath))
+                            {
+                                continue;
+                            }
                         }
                         else
                         {
@@ -106,7 +116,8 @@ namespace ValheimExtComponentManager
                         }
                     }
 
-                    callback(entryPath, entry);
+                    bool isDirectory = IsDirectory(entry);
+                    callback(entryPath, entry, isDirectory);
                 }
             }
         }
@@ -114,9 +125,9 @@ namespace ValheimExtComponentManager
         public async Task BackupOverlappingFiles(string componentName, string subdirectory)
         {
             var steamValheimDir = _context.SteamValheimDir;
-            var origValheimFilesDir = _context.GetOrigValheimFiles();
+            var origValheimFilesDir = _context.GetOrigValheimFilesDir(componentName, true);
 
-            await ScanComponentArchive(componentName, subdirectory, (relativeFilePath, entry) =>
+            await ScanComponentArchive(componentName, subdirectory, (relativeFilePath, entry, isDirectory) =>
             {
                 var sourceFilePath = Path.Combine(steamValheimDir, relativeFilePath);
                 var backupFilePath = Path.Combine(origValheimFilesDir, relativeFilePath);
@@ -156,19 +167,29 @@ namespace ValheimExtComponentManager
         {
             var steamValheimDir = _context.SteamValheimDir;
 
-            await ScanComponentArchive(componentName, subdirectory, (relativeFilePath, entry) =>
+            await ScanComponentArchive(componentName, subdirectory, (relativeFilePath, entry, isDirectory) =>
             {
                 var destinationFilePath = Path.Combine(steamValheimDir, relativeFilePath);
 
                 try
                 {
-                    var destinationDir = Path.GetDirectoryName(destinationFilePath);
-                    if (!Directory.Exists(destinationDir))
+                    if (isDirectory)
                     {
-                        Directory.CreateDirectory(destinationDir);
+                        if (!Directory.Exists(destinationFilePath))
+                        {
+                            Directory.CreateDirectory(destinationFilePath);
+                        }
                     }
+                    else // is File
+                    {
+                        var destinationDir = Path.GetDirectoryName(destinationFilePath);
+                        if (!Directory.Exists(destinationDir))
+                        {
+                            Directory.CreateDirectory(destinationDir);
+                        }
 
-                    entry.ExtractToFile(destinationFilePath, true);
+                        entry.ExtractToFile(destinationFilePath, true);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -178,12 +199,13 @@ namespace ValheimExtComponentManager
             });
         }
 
+        // Is this needed anymore?
         public async Task CheckUpdateOverlappingFiles(string componentName, string subdirectory)
         {
             var steamValheimDir = _context.SteamValheimDir;
-            var origValheimFilesDir = _context.GetOrigValheimFiles();
+            var origValheimFilesDir = _context.GetOrigValheimFilesDir(componentName, true);
 
-            await ScanComponentArchive(componentName, subdirectory, (relativeFilePath, entry) =>
+            await ScanComponentArchive(componentName, subdirectory, (relativeFilePath, entry, isDirectory) =>
             {
                 var sourceFilePath = Path.Combine(steamValheimDir, relativeFilePath);
                 var backupFilePath = Path.Combine(origValheimFilesDir, relativeFilePath);
@@ -219,42 +241,73 @@ namespace ValheimExtComponentManager
             });
         }
 
-        public async Task RestoreOverlappingFiles(string componentName, string subdirectory)
+        public async Task CheckUninstallComponentArchive(string componentName, string subdirectory)
         {
             var steamValheimDir = _context.SteamValheimDir;
-            var origValheimFilesDir = _context.GetOrigValheimFiles();
+            var origValheimFilesDir = _context.GetOrigValheimFilesDir(componentName, true);
 
-            await ScanComponentArchive(componentName, subdirectory, (relativeFilePath, entry) =>
+            await ScanComponentArchive(componentName, subdirectory, (relativeFilePath, entry, isDirectory) =>
             {
+                if (isDirectory)
+                {
+                    return;
+                }
+
                 var backupFilePath = Path.Combine(origValheimFilesDir, relativeFilePath);
                 var destinationFilePath = Path.Combine(steamValheimDir, relativeFilePath);
 
                 try
                 {
-                    if (File.Exists(backupFilePath) && File.Exists(destinationFilePath))
+                    bool hasBackup = File.Exists(backupFilePath);
+                    bool hasDestination = File.Exists(destinationFilePath);
+
+                    // Skip if no backup exists and no destination file exists
+                    if (!hasBackup && !hasDestination)
                     {
-                        using (var sourceStream = new FileStream(destinationFilePath, FileMode.Open, FileAccess.Read))
+                        return;
+                    }
+
+                    // Check if destination file matches the zip entry
+                    if (hasDestination)
+                    {
+                        bool destinationMatchesZip = false;
+                        using (var destStream = new FileStream(destinationFilePath, FileMode.Open, FileAccess.Read))
                         using (var entryStream = entry.Open())
                         {
-                            if (StreamsAreEqual(sourceStream, entryStream))
-                            {
-                                var destinationDir = Path.GetDirectoryName(destinationFilePath);
-                                if (!Directory.Exists(destinationDir))
-                                {
-                                    Directory.CreateDirectory(destinationDir);
-                                }
-
-                                try
-                                {
-                                    File.Move(backupFilePath, destinationFilePath);
-                                }
-                                catch (IOException)
-                                {
-                                    File.Copy(backupFilePath, destinationFilePath, true);
-                                    File.Delete(backupFilePath);
-                                }
-                            }
+                            destinationMatchesZip = StreamsAreEqual(destStream, entryStream);
                         }
+
+                        // If destination exists but doesn't match zip, leave it alone
+                        if (!destinationMatchesZip)
+                        {
+                            return;
+                        }
+                    }
+
+                    // At this point either:
+                    // 1. Destination matches zip and should be replaced/deleted
+                    // 2. Destination doesn't exist
+                    
+                    if (hasBackup)
+                    {
+                        // Restore from backup
+                        var destinationDir = Path.GetDirectoryName(destinationFilePath);
+                        Directory.CreateDirectory(destinationDir);
+
+                        try
+                        {
+                            File.Move(backupFilePath, destinationFilePath);
+                        }
+                        catch (IOException)
+                        {
+                            File.Copy(backupFilePath, destinationFilePath, true);
+                            File.Delete(backupFilePath);
+                        }
+                    }
+                    else if (hasDestination)
+                    {
+                        // No backup but destination matches zip - delete it
+                        File.Delete(destinationFilePath);
                     }
                 }
                 catch (Exception ex)
@@ -265,11 +318,12 @@ namespace ValheimExtComponentManager
             });
         }
 
-        public async Task CheckUninstallComponentArchive(string componentName, string subdirectory)
+        // TODO: Should we remove this?
+        public async Task CheckUninstallAndDeleteComponentArchive(string componentName, string subdirectory)
         {
             try
             {
-                await RestoreOverlappingFiles(componentName, subdirectory);
+                await CheckUninstallComponentArchive(componentName, subdirectory);
                 var archiveStorePath = _context.GetComponentArchiveStoreCurrentFile(componentName);
                 if (archiveStorePath != null && File.Exists(archiveStorePath))
                 {
@@ -388,12 +442,42 @@ namespace ValheimExtComponentManager
             return true;
         }
 
-        public static void TouchFile(string filePath)
+        public void TouchFile(string filePath)
         {
             if (!File.Exists(filePath))
             {
                 File.Create(filePath).Dispose();
             }
         }
+
+        public void CreateDirectoryIfNotExists(string directoryPath)
+        {
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+        }
+
+        public void CreateFileParentDirectoryIfNotExists(string filePath)
+        {
+            string directoryPath = Path.GetDirectoryName(filePath);
+            CreateDirectoryIfNotExists(directoryPath);
+        }
+
+        public void RecreateDirectoryAsEmpty(string directoryPath)
+        {
+            if (Directory.Exists(directoryPath))
+            {
+                Directory.Delete(directoryPath, recursive: true);
+            }
+            Directory.CreateDirectory(directoryPath);
+        }
+
+        public void RecreateFileParentDirectoryAsEmpty(string filePath)
+        {
+            string directoryPath = Path.GetDirectoryName(filePath);
+            RecreateDirectoryAsEmpty(directoryPath);
+        }
+
     }
 }

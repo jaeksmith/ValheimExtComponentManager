@@ -76,10 +76,8 @@ namespace ValheimExtComponentManager
             {
                 File.Delete(_currentArchivePath);
             }
-            if (File.Exists(newArchiveTempDownloadPath))
-            {
-                File.Delete(newArchiveTempDownloadPath);
-            }
+
+            _componentManageContext.ComponentFileOps.RecreateFileParentDirectoryAsEmpty(newArchiveTempDownloadPath);
 
             // Download and move new zip into archive directory
             Console.WriteLine("Downloading new archive from: " + newArchiveSourceUrl + " to: " + newArchiveTempDownloadPath);
@@ -113,7 +111,7 @@ namespace ValheimExtComponentManager
                 return false;
             }
 
-            ComponentFileOps.TouchFile(_installedFlagFile);
+            _componentManageContext.ComponentFileOps.TouchFile(_installedFlagFile);
             return true;
         }
 

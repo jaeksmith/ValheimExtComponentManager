@@ -42,6 +42,10 @@ namespace ValheimExtComponentManager
         [Option("ext-component-manager::use-component-spec-url", Required = false, HelpText = "Specifies the URL for the component spec.", Hidden = true)]
         public string ExtComponentManagerUseComponentSpecUrl { get; set; }
 
+        // --ext-component-manager::use-valheim-install-root { directory path }
+        [Option("ext-component-manager::use-valheim-install-root", Required = false, HelpText = "Specifies the Valheim installation root directory.", Hidden = true)]
+        public string ExtComponentManagerUseValheimInstallRoot { get; set; }
+
         public static ProgramOptions ParseArguments(string[] args)
         {
             ProgramOptions options = null;
@@ -70,6 +74,11 @@ namespace ValheimExtComponentManager
             if (!string.IsNullOrEmpty(options.ExtComponentManagerUseInstallRoot) && !Directory.Exists(options.ExtComponentManagerUseInstallRoot))
             {
                 throw new ArgumentException($"Invalid directory path '{options.ExtComponentManagerUseInstallRoot}' for option 'ext-component-manager::use-install-root'.");
+            }
+
+            if (!string.IsNullOrEmpty(options.ExtComponentManagerUseValheimInstallRoot) && !Directory.Exists(options.ExtComponentManagerUseValheimInstallRoot))
+            {
+                throw new ArgumentException($"Invalid directory path '{options.ExtComponentManagerUseValheimInstallRoot}' for option 'ext-component-manager::use-valheim-install-root'.");
             }
         }
 

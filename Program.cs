@@ -33,9 +33,18 @@ namespace ValheimExtComponentManager
                 Console.WriteLine($"\tVoice Commander Check Update: {options.VoiceCommanderCheckUpdate}");
                 Console.WriteLine($"\tVoice Commander Manage: {options.VoiceCommanderManage}");
 
-                if (options.ExtComponentManagerCheckUpdate == null)
+                // Check if any non-hidden options are specified
+                bool hasNonHiddenOptions = 
+                    !string.IsNullOrEmpty(options.ExtComponentManagerCheckUpdate) ||
+                    !string.IsNullOrEmpty(options.ValheimVrCheckUpdate) ||
+                    !string.IsNullOrEmpty(options.ValheimVrEnabled) ||
+                    !string.IsNullOrEmpty(options.VoiceCommanderCheckUpdate) ||
+                    !string.IsNullOrEmpty(options.VoiceCommanderManage) ||
+                    !string.IsNullOrEmpty(options.ValheimStart);
+
+                if (!hasNonHiddenOptions)
                 {
-                    Console.WriteLine("No options specified - thus now work to do.");
+                    Console.WriteLine("No options specified - thus no work to do.");
                     Environment.Exit(1);
                 }
 
@@ -61,7 +70,11 @@ namespace ValheimExtComponentManager
 
                 // Initialize component manager
 
-                string? steamValheimDir = SteamUtils.LookupAppInstallPath("Valheim");
+                string? steamValheimDir =
+                    (options.ExtComponentManagerUseValheimInstallRoot != null)
+                        ? options.ExtComponentManagerUseValheimInstallRoot
+                        : SteamUtils.LookupAppInstallPath("Valheim");
+                
                 if (steamValheimDir == null)
                 {
                     Console.WriteLine("Valheim path not found.");
@@ -81,6 +94,8 @@ namespace ValheimExtComponentManager
                 ComponentManageContext componentManageContext = new ComponentManageContext(options, managementInstallDir, steamValheimDir, componentArchiveSpec);
 
                 await ExtComponentManagerUpdater.PerformManagementProcessing(componentManageContext, args);
+
+                await BepInExValheimModUpdater.PerformManagementProcessing(componentManageContext);
 
                 Console.WriteLine("Processing completed.");
             }

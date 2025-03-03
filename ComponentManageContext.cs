@@ -8,6 +8,7 @@ namespace ValheimExtComponentManager
         public string ManagementInstallDir { get; set; }
         public string SteamValheimDir { get; set; }
         public ComponentArchiveSpec ArchiveSpec { get; set; }
+        public ComponentFileOps ComponentFileOps { get; set; }
 
         public ComponentManageContext(ProgramOptions options, string managementInstallDir, string steamValheimDir, ComponentArchiveSpec archiveSpec)
         {
@@ -15,6 +16,7 @@ namespace ValheimExtComponentManager
             ManagementInstallDir = managementInstallDir ?? throw new ArgumentNullException(nameof(managementInstallDir));
             SteamValheimDir = steamValheimDir ?? throw new ArgumentNullException(nameof(steamValheimDir));
             ArchiveSpec = archiveSpec ?? throw new ArgumentNullException(nameof(archiveSpec));
+            ComponentFileOps = new ComponentFileOps(this);
         }
 
         public string GetComponentDir(string componentName)
@@ -61,6 +63,17 @@ namespace ValheimExtComponentManager
             return ArchiveSpec.GetComponentArchive(componentName);
         }
 
+        public string GetOrigValheimFilesDir(string componentName, bool createIfNotExists)
+        {
+            var componentDir = GetComponentDir(componentName);
+            var origValheimFilesDir = System.IO.Path.Combine(componentDir, "OrigValheimFiles");
+            if (createIfNotExists)
+            {
+                System.IO.Directory.CreateDirectory(origValheimFilesDir);
+            }
+            return origValheimFilesDir;
+        }
+
         public string GetTempDir()
         {
             var tempDir = System.IO.Path.Combine(ManagementInstallDir, "Temp");
@@ -73,13 +86,6 @@ namespace ValheimExtComponentManager
             var tempDir = GetTempDir();
             var timeFilePath = System.IO.Path.Combine(tempDir, filename);
             return timeFilePath;
-        }
-
-        public string GetOrigValheimFiles()
-        {
-            var origValheimFilesDir = System.IO.Path.Combine(ManagementInstallDir, "OrigValheimFiles");
-            System.IO.Directory.CreateDirectory(origValheimFilesDir);
-            return origValheimFilesDir;
         }
     }
 }

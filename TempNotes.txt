@@ -1,3 +1,15 @@
+[ToDos]
+
+- Temp archive downloads dir - clean dir instead of temp files as the filenames will change and so might leave garbage D:
+- On error display a message dialog?
+
+- Component name constants to ~ComponentManagerContext?
+
+- Default option values / explicit option values
+- Complain on unknown options
+
+################
+
 <Desktop>\{quick scripts}
 LOCAL_INSTALL_DIR=?:\Tools\Valheim\ValeheimExtComponentManager\
 LOCAL_INSTALL_DIR\{scripts & exe}
