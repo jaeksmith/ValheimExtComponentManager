@@ -296,10 +296,12 @@ namespace ValheimExtComponentManager
 
                         try
                         {
-                            File.Move(backupFilePath, destinationFilePath);
+                            File.Move(backupFilePath, destinationFilePath, overwrite: true);
                         }
-                        catch (IOException)
+                        catch (IOException ex)
                         {
+                            Console.WriteLine($"File move from '{backupFilePath}' to '{destinationFilePath}' failed: {ex.Message}");
+                            Console.WriteLine("Attempting copy and delete as fallback...");
                             File.Copy(backupFilePath, destinationFilePath, true);
                             File.Delete(backupFilePath);
                         }

@@ -95,7 +95,7 @@ namespace ValheimExtComponentManager
 
                 await ExtComponentManagerUpdater.PerformManagementProcessing(componentManageContext, args);
 
-                await BepInExValheimModUpdater.PerformManagementProcessing(componentManageContext);
+                await PerformVrModsComponentManagementProcessing(componentManageContext);
 
                 Console.WriteLine("Processing completed.");
             }
@@ -103,6 +103,35 @@ namespace ValheimExtComponentManager
             {
                 Console.WriteLine("An error occurred: " + ex.Message);
                 Console.WriteLine("Stack Trace: " + ex.StackTrace);
+            }
+        }
+
+        public static async Task PerformVrModsComponentManagementProcessing(ComponentManageContext componentManageContext)
+        {
+            bool checkDownload = (componentManageContext.Options.ValheimVrCheckUpdate == "yes");
+
+            ComponentState targetInstallState;
+            switch (componentManageContext.Options.ValheimVrEnabled)
+            {
+                case "yes":  targetInstallState = ComponentState.Installed;  break;
+                case "no":  targetInstallState = ComponentState.Uninstalled;  break;
+                case null:  targetInstallState = ComponentState.Maintain;  break;
+                default:  throw new InvalidOperationException("Invalid Valheim VR enabled state.");
+            }
+
+            BepInExValheimModUpdater bepInExModUpdater = new BepInExValheimModUpdater(componentManageContext);
+            VHVRValheimVRValheimModUpdater vhvrValheimVrModUpdater = new VHVRValheimVRValheimModUpdater(componentManageContext);
+
+            ValheimModUpdater[] modUpdaters = [ bepInExModUpdater, vhvrValheimVrModUpdater ];
+            if (targetInstallState == ComponentState.Uninstalled)
+            {
+                Array.Reverse(modUpdaters); // Uninstall in reverse order
+            }
+
+            foreach (var modUpdater in modUpdaters)
+            {
+                Console.WriteLine($"Checking/performing mod updates for module: {modUpdater.GetComponentName()} (per state: {targetInstallState})");
+                await modUpdater.CheckImplementInstalledState(checkDownload, targetInstallState);
             }
         }
     }

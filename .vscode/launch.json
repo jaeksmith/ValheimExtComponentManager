@@ -8,9 +8,11 @@
       "program": "${workspaceFolder}/bin/Debug/net8.0/ValheimExtComponentManager.dll",
       "args": [
         "--ext-component-manager::use-install-root",
-        "D:\\Temp\\ToDelete\\ValheimECM",
+        "D:\\Temp\\ToDelete2\\Test_Dirs\\ValheimECM",
         "--ext-component-manager::use-component-spec-url",
         "https://www.dropbox.com/scl/fi/qk55f7qsio897bba5pdgu/manager-config.spec?rlkey=oricfpeq1bo9cbnmkygywn0pc&st=fvniq3v3&dl=1",
+        "--ext-component-manager::use-valheim-install-root",
+        "D:\\Temp\\ToDelete2\\Test_Dirs\\ValheimSteamInstallDir",
         "--ext-component-manager::check-update",
         "yes"
       ],
@@ -23,9 +25,11 @@
       "program": "${workspaceFolder}/bin/Debug/net8.0/ValheimExtComponentManager.dll",
       "args": [
         "--ext-component-manager::use-install-root",
-        "D:\\Temp\\ToDelete\\ValheimECM",
+        "D:\\Temp\\ToDelete2\\Test_Dirs\\ValheimECM",
         "--ext-component-manager::use-component-spec-url",
         "https://www.dropbox.com/scl/fi/qk55f7qsio897bba5pdgu/manager-config.spec?rlkey=oricfpeq1bo9cbnmkygywn0pc&st=fvniq3v3&dl=1",
+        "--ext-component-manager::use-valheim-install-root",
+        "D:\\Temp\\ToDelete2\\Test_Dirs\\ValheimSteamInstallDir",
         "--ext-component-manager::check-update",
         "check-install-only"
       ],
@@ -38,11 +42,11 @@
       "program": "${workspaceFolder}/bin/Debug/net8.0/ValheimExtComponentManager.dll",
       "args": [
         "--ext-component-manager::use-install-root",
-        "D:\\Temp\\ToDelete\\ValheimECM",
+        "D:\\Temp\\ToDelete2\\Test_Dirs\\ValheimECM",
         "--ext-component-manager::use-component-spec-url",
         "https://www.dropbox.com/scl/fi/qk55f7qsio897bba5pdgu/manager-config.spec?rlkey=oricfpeq1bo9cbnmkygywn0pc&st=fvniq3v3&dl=1",
         "--ext-component-manager::use-valheim-install-root",
-        "D:\\Temp\\ToDelete\\ValheimInstallDirSim",
+        "D:\\Temp\\ToDelete2\\Test_Dirs\\ValheimSteamInstallDir",
         "--ext-component-manager::check-update",
         "no",
         "--valheim-vr::check-update",
@@ -59,11 +63,11 @@
       "program": "${workspaceFolder}/bin/Debug/net8.0/ValheimExtComponentManager.dll",
       "args": [
         "--ext-component-manager::use-install-root",
-        "D:\\Temp\\ToDelete\\ValheimECM",
+        "D:\\Temp\\ToDelete2\\Test_Dirs\\ValheimECM",
         "--ext-component-manager::use-component-spec-url",
         "https://www.dropbox.com/scl/fi/qk55f7qsio897bba5pdgu/manager-config.spec?rlkey=oricfpeq1bo9cbnmkygywn0pc&st=fvniq3v3&dl=1",
         "--ext-component-manager::use-valheim-install-root",
-        "D:\\Temp\\ToDelete\\ValheimInstallDirSim",
+        "D:\\Temp\\ToDelete2\\Test_Dirs\\ValheimSteamInstallDir",
         "--ext-component-manager::check-update",
         "no",
         "--valheim-vr::check-update",
