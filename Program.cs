@@ -97,6 +97,40 @@ namespace ValheimExtComponentManager
 
                 await PerformVrModsComponentManagementProcessing(componentManageContext);
 
+                if (options.ValheimStart == "yes")
+                {
+                    Console.WriteLine("Starting Valheim...");
+                    var process = System.Diagnostics.Process.Start("explorer.exe", "steam://run/892970");
+                    if (process != null)
+                    {
+                        // Wait for Valheim process to start
+                        const string valheimProcessName = "valheim";
+                        System.Diagnostics.Process? valheimProc = null;
+                        Console.WriteLine("Waiting for Valheim process to start...");
+                        for (int i = 0; i < 60; i++) // Wait up to 60 seconds
+                        {
+                            valheimProc = System.Diagnostics.Process.GetProcessesByName(valheimProcessName).FirstOrDefault();
+                            if (valheimProc != null)
+                                break;
+                            await Task.Delay(1000);
+                        }
+                        if (valheimProc != null)
+                        {
+                            Console.WriteLine("Valheim started. Waiting for it to exit...");
+                            valheimProc.WaitForExit();
+                            Console.WriteLine("Valheim has exited.");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Valheim process did not start within timeout.");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Failed to start Valheim process.");
+                    }
+                }
+
                 Console.WriteLine("Processing completed.");
             }
             catch (Exception ex)
@@ -115,7 +149,8 @@ namespace ValheimExtComponentManager
             {
                 case "yes":  targetInstallState = ComponentState.Installed;  break;
                 case "no":  targetInstallState = ComponentState.Uninstalled;  break;
-                case null:  targetInstallState = ComponentState.Maintain;  break;
+                case null:
+                case "maintain":  targetInstallState = ComponentState.Maintain;  break;
                 default:  throw new InvalidOperationException("Invalid Valheim VR enabled state.");
             }
 

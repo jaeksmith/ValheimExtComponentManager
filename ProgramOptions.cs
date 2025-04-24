@@ -8,6 +8,7 @@ namespace ValheimExtComponentManager
     {
         public static readonly HashSet<string> YesNoOptions = new HashSet<string> { "yes", "no" };
         public static readonly HashSet<string> YesNoCheckInstallOnlyOptions = new HashSet<string> { "yes", "no", "check-install-only" };
+        public static readonly HashSet<string> YesNoMaintainOptions = new HashSet<string> { "yes", "no", "maintain" };
         public static readonly HashSet<string> VoiceCommanderManageOptions = new HashSet<string> { "run-while-valheim-runs", "no", "restart", "start-if-not-running", "stop" };
 
         // --ext-component-manager::check-update { yes, no, check-install-only }
@@ -66,7 +67,7 @@ namespace ValheimExtComponentManager
         {
             ValidateOption(options.ExtComponentManagerCheckUpdate, YesNoCheckInstallOnlyOptions, "ext-component-manager::check-update");
             ValidateOption(options.ValheimVrCheckUpdate, YesNoOptions, "valheim-vr::check-update");
-            ValidateOption(options.ValheimVrEnabled, YesNoOptions, "valheim-vr::enable");
+            ValidateOption(options.ValheimVrEnabled, YesNoMaintainOptions, "valheim-vr::enable");
             ValidateOption(options.VoiceCommanderCheckUpdate, YesNoOptions, "voice-commander::check-update");
             ValidateOption(options.VoiceCommanderManage, VoiceCommanderManageOptions, "voice-commander::manage");
             ValidateOption(options.ValheimStart, YesNoOptions, "valheim::start");
